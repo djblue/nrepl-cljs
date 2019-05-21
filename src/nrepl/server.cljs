@@ -63,6 +63,13 @@
            {"nrepl"
             {"major" 0 "minor" 2}}
            "status" ["done"]}
+          "stacktrace"
+          {"id" id
+           "name" (.-name *e)
+           "class" (.-name *e)
+           "method" "test"
+           "message" (.-message *e)
+           "status" ["done"]}
           "interrupt"
           {"id" id
            "status" ["done"]}
@@ -88,9 +95,9 @@
                              pr-str)}
               (catch js/Object e
                 (set! *e e)
-                (js/console.error e)
                 {"id" id
-                 "ex" (ex-message e)
+                 "err" (.-stack e)
+                 "ex" (pr-str e)
                  "status" ["done"]})))
           "close"
           {})]
