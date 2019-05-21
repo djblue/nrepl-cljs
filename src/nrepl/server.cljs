@@ -78,7 +78,7 @@
                 session (get request "session")
                 name-space (symbol (or (get request "ns") "cljs.user"))
                 compiler (get-in @sessions [session :compiler])]
-            (println code)
+            ;(println code)
             (try
               (let [value (atom nil)
                     out (with-out-str
@@ -89,7 +89,7 @@
                        "out" out
                        "value"
                        (if (promise? @value)
-                         (str "#object[js/Promise " (pr-str %) "]")
+                         (str "#object[Promise " (pr-str %) "]")
                          (pr-str %))
                        "status" ["done"]})))
               (catch js/Object e
