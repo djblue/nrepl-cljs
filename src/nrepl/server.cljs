@@ -80,12 +80,15 @@
                 compiler (get-in @sessions [session :compiler])]
             (println code)
             (try
-              (let [value (-> code read-string (nrepl-eval name-space))]
+              (let [value (atom nil)
+                    out (with-out-str
+                          (reset! value (-> code read-string (nrepl-eval name-space))))]
                 (.then
-                 (js/Promise.resolve value)
+                 (js/Promise.resolve @value)
                  #(-> {"id" id
+                       "out" out
                        "value"
-                       (if (promise? value)
+                       (if (promise? @value)
                          (str "#object[js/Promise " (pr-str %) "]")
                          (pr-str %))
                        "status" ["done"]})))
