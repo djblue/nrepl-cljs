@@ -92,10 +92,6 @@
                          (str "#object[js/Promise " (pr-str %) "]")
                          (pr-str %))
                        "status" ["done"]})))
-              #_{"value" (-> code
-                             read-string
-                             (nrepl-eval name-space)
-                             pr-str)}
               (catch js/Object e
                 (set! *e e)
                 {"id" id
