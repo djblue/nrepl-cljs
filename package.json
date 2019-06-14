@@ -6,6 +6,8 @@
   "scripts": {
     "fmt": "cljfmt src/**/*.cljs",
     "repl": "lumo -c src -r",
+    "start": "lumo -c src -m nrepl.server",
+    "proxy": "lumo -c src -m nrepl.proxy",
     "test": "lumo -c src:test -m nrepl.test-runner"
   },
   "repository": {
