@@ -5,7 +5,8 @@
   "description": "nrepl server implemented for clojurescript",
   "scripts": {
     "fmt": "cljfmt src/**/*.cljs",
-    "repl": "lumo -c src -r"
+    "repl": "lumo -c src -r",
+    "test": "lumo -c src:test -m nrepl.test-runner"
   },
   "repository": {
     "type": "git",

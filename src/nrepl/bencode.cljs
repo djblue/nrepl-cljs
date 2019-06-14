@@ -29,13 +29,21 @@
           data (subs data (inc i))]
       [(subs data 0 n) (subs data n)])))
 
+(defn read-bencode [string] (first (decode string)))
+
 (defn encode [data]
   (cond
     (string? data)
     (str (count data) ":" data)
+    (or (keyword? data)
+        (symbol? data))
+    (recur (str
+             (if-let [n (namespace data)]
+               (str n "/"))
+             (name data)))
     (number? data)
     (str "i" data "e")
-    (vector? data)
+    (or (vector? data) (nil? data))
     (str "l" (apply str (map encode data)) "e")
     (map? data)
     (str "d" (->> data
@@ -44,3 +52,5 @@
                          (str (encode k) (encode v))))
                   (apply str))
          "e")))
+
+(defn write-bencode [data] (encode data))
