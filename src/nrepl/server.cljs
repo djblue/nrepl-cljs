@@ -40,10 +40,8 @@
 
 (defn promise? [v] (instance? js/Promise v))
 
-(defn handle [socket message]
-  (let [request-string (.toString message "utf8")
-        [request] (decode request-string)
-        id (get request "id")
+(defn handler [request send]
+  (let [id (get request "id")
         op (get request "op")
         response
         (case op
@@ -104,17 +102,20 @@
       (.end socket)
       (.then
        (js/Promise.resolve response)
-       #(let [response-string (encode %)]
-          (.write socket response-string))))))
+       #(send %)))))
 
-(defn handler [socket]
-  (.on (.setNoDelay socket true) "data" #(handle socket %)))
+(defn transport [socket data]
+  (let [[request] (decode (.toString data "utf8"))]
+    (handler request #(.write socket (encode %)))))
+
+(defn setup [socket]
+  (.on (.setNoDelay socket true) "data" #(transport socket %)))
 
 (defn start-server []
   (init)
   (js/Promise.
    (fn [resolve reject]
-     (let [srv (net/createServer handler)]
+     (let [srv (net/createServer setup)]
        (.on srv "error" reject)
        (.listen
         srv
