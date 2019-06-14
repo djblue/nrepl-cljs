@@ -118,10 +118,12 @@
        (.on srv "error" reject)
        (.listen
         srv
-        3000
+        7888
         (fn []
           (resolve (.address srv))))))))
 
 (defn stop-server [server]
   (.close server))
+
+(defn -main [] (start-server))
 
