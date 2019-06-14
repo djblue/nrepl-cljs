@@ -7,6 +7,7 @@
             [clojure.repl]
             [uuid :as uuid]
             [nrepl.bencode :refer [encode decode]]
+            [clojure.walk :as walk]
             [clojure.pprint :refer [pprint]]))
 
 (defonce sessions (atom {}))
@@ -42,9 +43,8 @@
 
 (defn handler [request send]
   (let [id (get request "id")
-        op (get request "op")
         response
-        (case op
+        (case (:op request)
           "clone"
           (let [new-session (str (uuid/v4))]
             (swap! sessions
@@ -72,9 +72,9 @@
           {"id" id
            "status" ["done"]}
           "eval"
-          (let [code (get request "code")
-                session (get request "session")
-                name-space (symbol (or (get request "ns") "cljs.user"))
+          (let [code (:code request)
+                session (:session request)
+                name-space (symbol (or (:ns request) "cljs.user"))
                 compiler (get-in @sessions [session :compiler])]
             ;(println code)
             (try
@@ -98,15 +98,18 @@
                  "status" ["done"]})))
           "close"
           {})]
-    (if (= op "close")
-      (.end socket)
+    (if (= (:op request) "close")
+      (send nil)
       (.then
        (js/Promise.resolve response)
        #(send %)))))
 
 (defn transport [socket data]
   (let [[request] (decode (.toString data "utf8"))]
-    (handler request #(.write socket (encode %)))))
+    (handler (walk/keywordize-keys request)
+             #(if (nil? %)
+                (.end socket)
+                (.write socket (encode %))))))
 
 (defn setup [socket]
   (.on (.setNoDelay socket true) "data" #(transport socket %)))
