@@ -6,8 +6,7 @@
             [lumo.repl :as repl]
             [clojure.repl]
             [uuid :as uuid]
-            [nrepl.bencode :refer [encode decode]]
-            [clojure.walk :as walk]
+            [nrepl.bencode :refer [encode decode-all]]
             [clojure.pprint :refer [pprint]]))
 
 (defonce sessions (atom {}))
@@ -106,21 +105,26 @@
     (pprint (assoc req :type :request))
     (handler req #(do (pprint (assoc % :type :response)) (send %)))))
 
-(defn transport [socket data]
-  (let [[req] (decode (.toString data "utf8"))
-        req (walk/keywordize-keys req)
+(defn transport [socket state data]
+  (let [data (if (nil? state)
+               data
+               (js/Buffer.concat (clj->js [state data])))
+        [reqs data] (decode-all data :keywordize-keys true)
         handler (-> dispatch-send
                     attach-id
                     stringify-value
                     logger)]
-    (handler req #(do
-                    (.write socket (encode %))
-                    (when (= (:op req) "close")
-                      (.end socket))))))
+    (doseq [req reqs]
+      (handler req #(do
+                      (.write socket (encode %))
+                      (when (= (:op req) "close")
+                        (.end socket)))))
+    data))
 
 (defn setup [socket]
-  (.setNoDelay socket true)
-  (.on socket "data" #(transport socket %)))
+  (let [state (atom nil)]
+    (.setNoDelay socket true)
+    (.on socket "data" #(reset! state (transport socket @state %)))))
 
 (defn start-server []
   (init)
