@@ -4,7 +4,7 @@
                                                write-bencode]]))
 
 (deftest test-string-reading
-  (are [x y] (= (read-bencode x) y)
+  (are [x y] (= (str (read-bencode (js/Buffer.from x))) y)
     "0:"                ""
     "13:Hello, World!"  "Hello, World!"
     "16:Hällö, Würld!"  "Hällö, Würld!"
