@@ -74,12 +74,11 @@
           (set! *e e)
           {:err (.-stack e)
            :ex (pr-str e)})))
-    :close
-    nil))
+    :close {}))
 
 (defn dispatch-send [req send]
   (let [op (-> req :op keyword)]
-    (send (when-let [res (dispatch (assoc req :op op))]
+    (send (let [res (dispatch (assoc req :op op))]
             (assoc res :status [:done])))))
 
 (defn promise? [v] (instance? js/Promise v))
@@ -109,14 +108,15 @@
 
 (defn transport [socket data]
   (let [[req] (decode (.toString data "utf8"))
+        req (walk/keywordize-keys req)
         handler (-> dispatch-send
                     attach-id
                     stringify-value
                     logger)]
-    (handler (walk/keywordize-keys req)
-             #(if (nil? %)
-                (.end socket)
-                (.write socket (encode %))))))
+    (handler req #(do
+                    (.write socket (encode %))
+                    (when (= (:op req) "close")
+                      (.end socket))))))
 
 (defn setup [socket]
   (.setNoDelay socket true)
