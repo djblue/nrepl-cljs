@@ -2,7 +2,11 @@
   "name": "nrepl-cljs",
   "version": "0.0.1",
   "license": "MIT",
-  "description": "nrepl server implemented for clojurescript",
+  "description": "A nrepl server implemented for clojurescript.",
+  "author": {
+    "name": "Chris Badahdah",
+    "email": "a.s.badahdah@gmail.com"
+  },
   "scripts": {
     "fmt": "cljfmt src/**/*.cljs",
     "repl": "lumo -c src -r",
@@ -23,5 +27,12 @@
   "devDependencies": {
     "lumo-cljs": "^1.10.1",
     "node-cljfmt": "^0.5.3-1"
-  }
+  },
+  "keywords": [
+    "clojurescript",
+    "planck",
+    "lumo",
+    "self-host",
+    "nrepl"
+  ]
 }
