@@ -39,80 +39,94 @@
              (-> k namespace symbol))))
          dorun)))
 
-(defn promise? [v] (instance? js/Promise v))
-
-(defn handler [request send]
-  (let [id (get request "id")
+(defn dispatch [req send]
+  (let [id (:id req)
         response
-        (case (:op request)
+        (case (:op req)
           "clone"
           (let [new-session (str (uuid/v4))]
             (swap! sessions
                    assoc
                    new-session
                    {:compiler (cljs.js/empty-state)})
-            {"id" id
-             "new-session" new-session
-             "status" ["done"]})
+            {:new-session new-session
+             :status ["done"]})
           "describe"
-          {"id" id
-           "ops" {"stacktrace" 1}
-           "versions"
+          {:ops {:stacktrace 1}
+           :versions
            {"nrepl"
             {"major" 0 "minor" 2}}
            "status" ["done"]}
           "stacktrace"
-          {"id" id
-           "name" (.-name *e)
-           "class" (.-name *e)
-           "method" "test"
-           "message" (.-message *e)
-           "status" ["done"]}
+          {:name (.-name *e)
+           :class (.-name *e)
+           :method "test"
+           :message (.-message *e)
+           :status ["done"]}
           "interrupt"
-          {"id" id
-           "status" ["done"]}
+          {:status ["done"]}
           "eval"
-          (let [code (:code request)
-                session (:session request)
-                name-space (symbol (or (:ns request) "cljs.user"))
+          (let [code (:code req)
+                session (:session req)
+                name-space (symbol (or (:ns req) "cljs.user"))
                 compiler (get-in @sessions [session :compiler])]
-            ;(println code)
             (try
               (let [value (atom nil)
                     out (with-out-str
                           (reset! value (-> code read-string (nrepl-eval name-space))))]
-                (.then
-                 (js/Promise.resolve @value)
-                 #(-> {"id" id
-                       "out" out
-                       "value"
-                       (if (promise? @value)
-                         (str "#object[Promise " (pr-str %) "]")
-                         (pr-str %))
-                       "status" ["done"]})))
+                {:out out
+                 :value @value
+                 :status ["done"]})
               (catch js/Object e
                 (set! *e e)
-                {"id" id
-                 "err" (.-stack e)
-                 "ex" (pr-str e)
-                 "status" ["done"]})))
+                {:err (.-stack e)
+                 :ex (pr-str e)
+                 :status ["done"]})))
           "close"
           {})]
-    (if (= (:op request) "close")
+    (if (= (:op req) "close")
       (send nil)
-      (.then
-       (js/Promise.resolve response)
-       #(send %)))))
+      (send response))))
+
+(defn promise? [v] (instance? js/Promise v))
+
+(defn stringify-value [handler]
+  (fn [req send]
+    (handler req
+             (fn [res]
+               (if (contains? res :value)
+                 (let [value (:value res)]
+                   (if (promise? value)
+                     (.then value
+                            #(let [value (str "#object[Promise " (pr-str %) "]")]
+                               (send (assoc res :value value))))
+                     (send (assoc res :value (pr-str value)))))
+                 (send res))))))
+
+(defn attach-id [handler]
+  (fn [req send]
+    (let [id (:id req)]
+      (handler req #(send (assoc % :id id))))))
+
+(defn logger [handler]
+  (fn [req send]
+    (pprint (assoc req :type :request))
+    (handler req #(do (pprint (assoc % :type :response)) (send %)))))
 
 (defn transport [socket data]
-  (let [[request] (decode (.toString data "utf8"))]
-    (handler (walk/keywordize-keys request)
+  (let [[req] (decode (.toString data "utf8"))
+        handler (-> dispatch
+                    attach-id
+                    stringify-value
+                    logger)]
+    (handler (walk/keywordize-keys req)
              #(if (nil? %)
                 (.end socket)
                 (.write socket (encode %))))))
 
 (defn setup [socket]
-  (.on (.setNoDelay socket true) "data" #(transport socket %)))
+  (.setNoDelay socket true)
+  (.on socket "data" #(transport socket %)))
 
 (defn start-server []
   (init)
