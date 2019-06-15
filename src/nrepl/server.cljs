@@ -5,7 +5,6 @@
             [cljs.js :as cljs]
             [lumo.repl :as repl]
             [clojure.repl]
-            [uuid :as uuid]
             [nrepl.bencode :refer [encode decode-all]]
             [clojure.pprint :refer [pprint]]))
 
@@ -41,7 +40,7 @@
 (defn dispatch [req]
   (case (:op req)
     :clone
-    (let [new-session (str (uuid/v4))]
+    (let [new-session (str (random-uuid))]
       (swap! sessions
              assoc
              new-session

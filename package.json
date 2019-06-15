@@ -14,9 +14,6 @@
     "type": "git",
     "url": "https://github.com/djblue/nrepl-cljs"
   },
-  "dependencies": {
-    "uuid": "^3.3.2"
-  },
   "devDependencies": {
     "lumo-cljs": "^1.10.1",
     "node-cljfmt": "^0.5.3-1"
