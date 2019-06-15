@@ -65,9 +65,9 @@
       (try
         (let [value (atom nil)
               out (with-out-str
-                    (reset! value (-> code read-string (nrepl-eval name-space))))]
-          {:out out
-           :value @value})
+                    (reset! value (-> code read-string (nrepl-eval name-space))))
+              res {:ns (name name-space) :value @value}]
+          (if (empty? out) res (assoc res :out out)))
         (catch js/Object e
           (set! *e e)
           {:err (.-stack e)
@@ -75,9 +75,13 @@
     :close {}))
 
 (defn dispatch-send [req send]
-  (let [op (-> req :op keyword)]
-    (send (let [res (dispatch (assoc req :op op))]
-            (assoc res :status [:done])))))
+  (let [op (-> req :op keyword)
+        res (dispatch (assoc req :op op))]
+    (if (= op :clone)
+      (send (assoc res :status [:done]))
+      (do
+        (send res)
+        (send {:status ["done"]})))))
 
 (defn promise? [v] (instance? js/Promise v))
 
@@ -96,8 +100,8 @@
 
 (defn attach-id [handler]
   (fn [req send]
-    (let [id (:id req)]
-      (handler req #(send (assoc % :id id))))))
+    (let [{:keys [id session]} req]
+      (handler req #(send (merge {:id id} (when session {:session session}) %))))))
 
 (defn logger [handler]
   (fn [req send]
@@ -116,7 +120,8 @@
     (doseq [req reqs]
       (handler req #(do
                       (.write socket (encode %))
-                      (when (= (:op req) "close")
+                      (when (and (= (:op req) "close")
+                                 (contains? % :status))
                         (.end socket)))))
     data))
 
