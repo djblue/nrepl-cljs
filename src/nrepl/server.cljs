@@ -117,7 +117,7 @@
         handler (-> dispatch-send
                     attach-id
                     stringify-value
-                    logger)]
+                    #_logger)]
     (doseq [req reqs]
       (handler req #(do
                       (.write socket (encode %))
@@ -141,10 +141,10 @@
         srv
         7888
         (fn []
-          (resolve (.address srv))))))))
+          (resolve {:handle srv :port (.-port (.address srv))})))))))
 
 (defn stop-server [server]
-  (.close server))
+  (.close (:handle server)))
 
 (defn -main [] (start-server))
 

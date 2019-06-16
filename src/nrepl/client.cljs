@@ -33,6 +33,9 @@
                         (resolve message)))))
        (.write (:socket client) (encode (assoc message :id id)))))))
 
+(defn close [client]
+  (.end (:socket client)))
+
 (comment
   (def c (atom nil))
   (-> @c)
