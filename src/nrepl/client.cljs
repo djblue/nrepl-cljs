@@ -1,43 +1,43 @@
 (ns nrepl.client
-  (:require [net :as net]
-            [uuid :as uuid]
-            [nrepl.bencode :refer [encode decode]]))
+  (:require [nrepl.bencode :refer [encode decode]]))
 
 (defn- on-message [client data]
   (let [messages (:messages client)
-        message (first (decode (.toString data "utf8")))
-        id (get message "id")]
-    (swap! messages assoc id message)))
+        [message data] (decode data :keywordize-keys true)
+        id (:id message)]
+    (swap! messages update id #(conj % message))
+    (when-not (zero? (.-length data))
+      (recur client data))))
 
 (defn connect [& {:keys [port]}]
   (js/Promise.
    (fn [resolve reject]
-     (let [socket (net/Socket.) messages (atom {})
+     (let [net (js/require "net")
+           socket (.Socket net) messages (atom {})
            client {:socket socket :messages messages}]
        (.connect socket port #(resolve client))
        (.on socket "data" #(on-message client %))))))
 
-(defn promise? [v] (instance? js/Promise v))
-
 (defn message [client message]
   (js/Promise.
    (fn [resolve reject]
-     (let [id (str (uuid/v4)) messages (:messages client)]
+     (let [id (str (random-uuid)) messages (:messages client)]
+       (swap! messages assoc id [])
        (add-watch messages
                   id
-                  #(when-let [message (get @messages id)]
-                     (remove-watch messages id)
-                     (swap! messages dissoc id)
-                     (resolve message)))
-       (.write (:socket client) (encode (assoc message "id" id)))))))
+                  (fn []
+                    (when-let [message (get @messages id)]
+                      (when (some #(contains? % :status) message)
+                        (remove-watch messages id)
+                        (swap! messages dissoc id)
+                        (resolve message)))))
+       (.write (:socket client) (encode (assoc message :id id)))))))
 
 (comment
   (def c (atom nil))
   (-> @c)
-  (.then (connect :port 3000)
+  (.then (connect :port 7888)
          #(reset! c %))
-  (message
-    @c
-    {"op" "eval"
-     "code" "{}"}))
+  (:messages @c)
+  (message @c {:op "eval" :code "{}"}))
 
