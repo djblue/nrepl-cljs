@@ -72,6 +72,7 @@
           (set! *e e)
           {:err (.-stack e)
            :ex (pr-str e)})))
+    :load-file {}
     :close {}))
 
 (defn dispatch-send [req send]
@@ -80,8 +81,8 @@
     (if (= op :clone)
       (send (assoc res :status [:done]))
       (do
-        (send res)
-        (send {:status ["done"]})))))
+        (.then (js/Promise.resolve (send res))
+               #(send {:status ["done"]}))))))
 
 (defn promise? [v] (instance? js/Promise v))
 
