@@ -93,9 +93,10 @@
                (if (contains? res :value)
                  (let [value (:value res)]
                    (if (promise? value)
-                     (.then value
-                            #(let [value (str "#object[Promise " (pr-str %) "]")]
-                               (send (assoc res :value value))))
+                     (-> value
+                         (.then #(str "#object[Promise " (pr-str %) "]"))
+                         (.catch #(str "#object[Promise " (pr-str %) "]"))
+                         (.then #(send (assoc res :value %))))
                      (send (assoc res :value (pr-str value)))))
                  (send res))))))
 
