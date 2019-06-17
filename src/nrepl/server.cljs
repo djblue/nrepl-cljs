@@ -4,38 +4,40 @@
             [cljs.tools.reader :refer [read-string]]
             [cljs.js :as cljs]
             [lumo.repl :as repl]
-            [clojure.repl]
+            [clojure.string :as s]
             [nrepl.bencode :refer [encode decode-all]]
             [clojure.pprint :refer [pprint]]))
 
 (defonce sessions (atom {}))
 
-(defn nrepl-eval [form name-space]
-  (binding [cljs/*load-fn* lumo.repl/load
-            cljs/*eval-fn* lumo.repl/caching-node-eval]
-    (cond
-      (= form '(require 'cljs.repl.nashorn))
-      nil
-      (= form '((or (resolve 'cider.piggieback/cljs-repl)
-                    (resolve 'cemerick.piggieback/cljs-repl))
-                (cljs.repl.nashorn/repl-env)))
-      nil
-      :else (repl/eval form name-space repl/st))))
+(defn lumo-eval [source ns session]
+  (let [value (atom nil)
+        source (s/replace source #"cljs\.repl\/source" "lumo.repl/source")
+        f js/$$LUMO_GLOBALS.doPrint]
+    (set! js/$$LUMO_GLOBALS.doPrint #())
+    ; small work around to work around a bug in lumo
+    (repl/execute "text" (str "(in-ns '" ns ")") true false ns 0)
+    (set! js/$$LUMO_GLOBALS.doPrint #(reset! value %2))
+    (repl/execute "text" source true false ns 0)
+    (set! js/$$LUMO_GLOBALS.doPrint f)
+    @value))
 
 (defn init []
   (let [vars
         '{cljs.core/all-ns lumo.repl/all-ns
           cljs.core/ns-map lumo.repl/ns-map
           cljs.core/ns-aliases lumo.repl/ns-map
-          cljs.repl/special-doc lumo.repl/special-doc
-          cljs.repl/namespace-doc lumo.repl/namespace-doc}]
+          clojure.repl/special-doc lumo.repl/special-doc
+          clojure.repl/namespace-doc lumo.repl/namespace-doc}]
     (->> vars
          (map
           (fn [[k v]]
-            (nrepl-eval
-             (list 'def (-> k name symbol) v)
-             (-> k namespace symbol))))
-         dorun)))
+            (lumo-eval
+             (str (list 'def (-> k name symbol) v))
+             (-> k namespace)
+             0)))
+         dorun)
+    (lumo-eval "(require 'lumo.repl)" "cljs.user" "")))
 
 (defn dispatch [req]
   (case (:op req)
@@ -60,13 +62,12 @@
     :eval
     (let [code (:code req)
           session (:session req)
-          name-space (symbol (or (:ns req) "cljs.user"))
-          compiler (get-in @sessions [session :compiler])]
+          ns (or (:ns req) "cljs.user")]
       (try
         (let [value (atom nil)
               out (with-out-str
-                    (reset! value (-> code read-string (nrepl-eval name-space))))
-              res {:ns (name name-space) :value @value}]
+                    (reset! value (lumo-eval code ns session)))
+              res {:ns ns :value @value}]
           (if (empty? out) res (assoc res :out out)))
         (catch js/Object e
           (set! *e e)
