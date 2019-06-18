@@ -10,28 +10,36 @@
 
 (defonce sessions (atom {}))
 
+(defn ignore [source]
+  (some #(s/includes? source %)
+        ["cljs.repl.nashorn"
+         "cider.piggieback"
+         "cemerick.piggieback"
+         "cljs.repl.rhino"]))
+
 (defn lumo-eval [source ns session]
-  (let [value (atom nil)
-        error (atom nil)
-        source (s/replace source #"cljs\.repl\/source" "lumo.repl/source")
-        f js/$$LUMO_GLOBALS.doPrint
-        handle-error lumo.repl/handle-error]
-    (set! js/$$LUMO_GLOBALS.doPrint #())
+  (when-not (ignore source)
+    (let [value (atom nil)
+          error (atom nil)
+          source (s/replace source #"cljs\.repl\/source" "lumo.repl/source")
+          f js/$$LUMO_GLOBALS.doPrint
+          handle-error lumo.repl/handle-error]
+      (set! js/$$LUMO_GLOBALS.doPrint #())
 
     ; small work around to work around a bug in lumo
-    (repl/execute "text" (str "(in-ns '" ns ")") true false ns 0)
+      (repl/execute "text" (str "(in-ns '" ns ")") true false ns 0)
 
     ; capture execution results
-    (set! js/$$LUMO_GLOBALS.doPrint #(reset! value %2))
-    (set! lumo.repl/handle-error #(reset! error %))
+      (set! js/$$LUMO_GLOBALS.doPrint #(reset! value %2))
+      (set! lumo.repl/handle-error #(reset! error %))
 
-    (repl/execute "text" source true false ns 0)
+      (repl/execute "text" source true false ns 0)
 
     ; reset internals
-    (set! js/$$LUMO_GLOBALS.doPrint f)
-    (set! lumo.repl/handle-error handle-error)
+      (set! js/$$LUMO_GLOBALS.doPrint f)
+      (set! lumo.repl/handle-error handle-error)
 
-    (if @error (throw (lumo.repl/extract-cljs-js-error @error)) @value)))
+      (if @error (throw (lumo.repl/extract-cljs-js-error @error)) @value))))
 
 (defn init []
   (let [vars
