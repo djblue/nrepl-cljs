@@ -39,7 +39,7 @@
       (set! js/$$LUMO_GLOBALS.doPrint f)
       (set! lumo.repl/handle-error handle-error)
 
-      (if @error (throw (lumo.repl/extract-cljs-js-error @error)) @value))))
+      (if @error (throw @error) @value))))
 
 (defn init []
   (let [vars
@@ -73,10 +73,10 @@
      {"nrepl"
       {"major" 0 "minor" 2}}}
     :stacktrace
-    {:name (.-name *e)
-     :class (.-name *e)
+    {:name ""
+     :class ""
      :method "test"
-     :message (.-message *e)}
+     :message ""}
     :interrupt {}
     :eval
     (let [code (:code req)
@@ -90,8 +90,12 @@
           (if (empty? out) res (assoc res :out out)))
         (catch js/Object e
           (set! *e e)
-          {:err (.-stack e)
-           :ex (pr-str e)})))
+          (loop [e (ex-cause e)]
+            (cond
+              (nil? e) {:err "unknown"}
+              (ex-cause e)
+              {:err (.-stack (ex-cause e)) :ex (pr-str e)}
+              :else (recur (ex-cause e)))))))
     :load-file {}
     :close {}))
 
