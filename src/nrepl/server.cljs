@@ -18,7 +18,10 @@
          "cljs.repl.rhino"]))
 
 (defn lumo-eval [source ns session]
-  (when-not (ignore source)
+  (if (ignore source)
+    (do
+      (println "To quit, type: :cljs/quit")
+      true)
     (let [value (atom nil)
           error (atom nil)
           source (s/replace source #"cljs\.repl\/source" "lumo.repl/source")
@@ -60,6 +63,9 @@
 
 (defn dispatch [req]
   (case (:op req)
+    :ns-list {}
+    :complete
+    {}
     :clone
     (let [new-session (str (random-uuid))]
       (swap! sessions
@@ -68,7 +74,7 @@
              {:compiler (cljs.js/empty-state)})
       {:new-session new-session})
     :describe
-    {:ops {:stacktrace 1}
+    {:ops {:stacktrace 1 :eval 1}
      :versions
      {"nrepl"
       {"major" 0 "minor" 2}}}
@@ -97,11 +103,14 @@
               {:err (.-stack (ex-cause e)) :ex (pr-str e)}
               :else (recur (ex-cause e)))))))
     :load-file {}
-    :close {}))
+    :close {}
+    {}))
 
 (defn dispatch-send [req send]
+  (prn :request req)
   (let [op (-> req :op keyword)
         res (dispatch (assoc req :op op))]
+    (prn :response res)
     (if (= op :clone)
       (send (assoc res :status [:done]))
       (do
