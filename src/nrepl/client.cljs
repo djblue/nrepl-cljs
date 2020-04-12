@@ -27,7 +27,7 @@
                   id
                   (fn []
                     (when-let [message (get @messages id)]
-                      (when (some #(contains? % :status) message)
+                      (when (some #((set (:status %)) "done") message)
                         (remove-watch messages id)
                         (swap! messages dissoc id)
                         (resolve message)))))

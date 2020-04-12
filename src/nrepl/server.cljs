@@ -44,10 +44,15 @@
              {:compiler (cljs.js/empty-state)})
       {:new-session new-session})
     :describe
-    {:ops {:stacktrace 1 :eval 1}
+    {:aux {:current-ns "cljs.user"}
+     :ops {:stacktrace 1 :eval 1}
      :versions
-     {"nrepl"
-      {"major" 0 "minor" 2}}}
+     {:clojurescript
+      {:version-string *clojurescript-version*}
+      :node
+      {:version-string js/process.version}
+      :nrepl
+      {:major 0 :minor 2 :version-string "0.2"}}}
     :stacktrace
     {:name ""
      :class ""
