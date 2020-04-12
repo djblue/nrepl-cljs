@@ -44,19 +44,23 @@
     (.on rl "close" #(c/close client))
 
     (.on rl "line"
-         #(a/let [res (c/message client {:op "eval" :code % :ns @ns})]
+         (fn [line]
+           (cond
+             (empty? line) (prompt!)
 
-            (doseq [msg res]
-              (when (:ns msg)
-                (reset! ns (:ns msg)))
-              (when-let [err (:err msg)]
-                (js/process.stderr.write err))
-              (when-let [out (:out msg)]
-                (js/process.stdout.write out))
-              (when is-tty?
-                (when-let [value (:value msg)]
-                  (println value))))
+             :else
+             (a/let [res (c/message client {:op "eval" :code line :ns @ns})]
+               (doseq [msg res]
+                 (when (:ns msg)
+                   (reset! ns (:ns msg)))
+                 (when-let [err (:err msg)]
+                   (js/process.stderr.write err))
+                 (when-let [out (:out msg)]
+                   (js/process.stdout.write out))
+                 (when is-tty?
+                   (when-let [value (:value msg)]
+                     (println value))))
 
-            (prompt!)))
+               (prompt!)))))
 
     (prompt!)))
