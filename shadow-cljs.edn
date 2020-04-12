@@ -1,0 +1,32 @@
+{:deps true
+ :builds
+ {:main
+  {:target :node-script
+   :main nrepl.main/-main
+   :output-to "target/main"
+
+   :compiler-options
+   {:optimizations :simple}
+
+   :devtools
+   {:enabled false}}
+
+  :client
+  {:target :node-script
+   :main nrepl.client.tty/-main
+   :output-to "target/repl"
+
+   :compiler-options
+   {:optimizations :simple}
+
+   :devtools
+   {:enabled false}}
+
+  :bootstrap
+  {:target :bootstrap
+   :output-dir "target/bootstrap"
+   :exclude #{cljs.js}
+   :entries [cljs.js]
+   :macros []
+   :js-options
+   {:js-provider :require}}}}

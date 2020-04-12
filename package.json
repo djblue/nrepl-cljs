@@ -7,13 +7,6 @@
     "name": "Chris Badahdah",
     "email": "a.s.badahdah@gmail.com"
   },
-  "scripts": {
-    "fmt": "cljfmt src/**/*.cljs",
-    "repl": "lumo -c src -r",
-    "start": "lumo -c src:test -m nrepl.server",
-    "proxy": "lumo -c src -m nrepl.proxy",
-    "test": "lumo -c src:test -m nrepl.test-runner"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/djblue/nrepl-cljs"
@@ -24,15 +17,13 @@
   "files": [
     "src/*"
   ],
-  "devDependencies": {
-    "lumo-cljs": "^1.10.1",
-    "node-cljfmt": "^0.5.3-1"
-  },
   "keywords": [
     "clojurescript",
     "planck",
-    "lumo",
     "self-host",
     "nrepl"
-  ]
+  ],
+  "devDependencies": {
+    "source-map-support": "^0.5.16"
+  }
 }

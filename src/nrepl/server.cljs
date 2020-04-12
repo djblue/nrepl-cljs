@@ -3,12 +3,14 @@
             [System]
             [cljs.tools.reader :refer [read-string]]
             [cljs.js :as cljs]
-            [lumo.repl :as repl]
             [clojure.string :as s]
             [nrepl.bencode :refer [encode decode-all]]
+            [nrepl.async :as a]
             [clojure.pprint :refer [pprint]]))
 
 (defonce sessions (atom {}))
+
+(def my-eval (atom nil))
 
 (defn ignore [source]
   (some #(s/includes? source %)
@@ -17,52 +19,20 @@
          "cemerick.piggieback"
          "cljs.repl.rhino"]))
 
-(defn lumo-eval [source ns session]
-  (if (ignore source)
-    (do
-      (println "To quit, type: :cljs/quit")
-      true)
-    (let [value (atom nil)
-          error (atom nil)
-          source (s/replace source #"cljs\.repl\/source" "lumo.repl/source")
-          f js/$$LUMO_GLOBALS.doPrint
-          handle-error lumo.repl/handle-error]
-      (set! js/$$LUMO_GLOBALS.doPrint #())
-
-    ; small work around to work around a bug in lumo
-      (repl/execute "text" (str "(in-ns '" ns ")") true false ns 0)
-
-    ; capture execution results
-      (set! js/$$LUMO_GLOBALS.doPrint #(reset! value %2))
-      (set! lumo.repl/handle-error #(reset! error %))
-
-      (repl/execute "text" source true false ns 0)
-
-    ; reset internals
-      (set! js/$$LUMO_GLOBALS.doPrint f)
-      (set! lumo.repl/handle-error handle-error)
-
-      (if @error (throw @error) @value))))
-
-(defn init []
-  (let [vars
-        '{cljs.core/all-ns lumo.repl/all-ns
-          cljs.core/ns-map lumo.repl/ns-map
-          cljs.core/ns-aliases lumo.repl/ns-map
-          clojure.repl/special-doc lumo.repl/special-doc
-          clojure.repl/namespace-doc lumo.repl/namespace-doc}]
-    (->> vars
-         (map
-          (fn [[k v]]
-            (lumo-eval
-             (str (list 'def (-> k name symbol) v))
-             (-> k namespace)
-             0)))
-         dorun)
-    (lumo-eval "(require 'lumo.repl)" "cljs.user" "")))
+(defn info [req]
+  (when-not (empty? (:symbol req))
+    (let [s (:symbol req)
+          m (@my-eval
+             (pr-str `(meta (var ~(symbol s))))
+             (:ns req)
+             (:session req))]
+      (merge
+       {:name s}
+       (select-keys m [:doc])))))
 
 (defn dispatch [req]
   (case (:op req)
+    :info (info req)
     :ns-list {}
     :complete
     {}
@@ -87,15 +57,21 @@
     :eval
     (let [code (:code req)
           session (:session req)
-          ns (or (:ns req) "cljs.user")]
+          ns (or (:ns req) 'cljs.user)]
       (try
-        (let [value (atom nil)
-              out (with-out-str
-                    (reset! value (lumo-eval code ns session)))
-              res {:ns ns :value @value}]
-          (if (empty? out) res (assoc res :out out)))
+        (a/let [res (@my-eval code ns)
+                out ""]
+          (println res)
+          (cond
+            (contains? res :error)
+            {:err (get-in res [:error :message])}
+
+            (empty? out) res
+
+            :else (assoc res :out out)))
         (catch js/Object e
           (set! *e e)
+          (println e)
           (loop [e (ex-cause e)]
             (cond
               (nil? e) {:err "unknown"}
@@ -108,9 +84,8 @@
 
 (defn dispatch-send [req send]
   (prn :request req)
-  (let [op (-> req :op keyword)
-        res (dispatch (assoc req :op op))]
-    (prn :response res)
+  (a/let [op (-> req :op keyword)
+          res (dispatch (assoc req :op op))]
     (if (= op :clone)
       (send (assoc res :status [:done]))
       (do
@@ -154,31 +129,34 @@
                     #_logger)]
     (doseq [req reqs]
       (handler req #(do
+                      (prn :response %)
                       (.write socket (encode %))
                       (when (and (= (:op req) "close")
                                  (contains? % :status))
                         (.end socket)))))
     data))
 
-(defn setup [socket]
-  (let [state (atom nil)]
-    (.setNoDelay socket true)
-    (.on socket "data" #(reset! state (transport socket @state %)))))
+(defn setup [eval]
+  (fn [socket]
+    (let [state (atom nil)]
+      (.setNoDelay socket true)
+      (.on socket "data"
+           #(do
+              (reset! my-eval eval)
+              (reset! state (transport socket @state %)))))))
 
-(defn start-server []
-  (init)
+(defn start-server [eval]
   (js/Promise.
    (fn [resolve reject]
-     (let [srv (net/createServer setup)]
+     (let [srv (net/createServer (setup eval))]
        (.on srv "error" reject)
        (.listen
         srv
         7888
         (fn []
+          (println "started server on port 7888")
           (resolve {:handle srv :port (.-port (.address srv))})))))))
 
 (defn stop-server [server]
   (.close (:handle server)))
-
-(defn -main [] (start-server))
 
