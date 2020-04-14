@@ -1,7 +1,8 @@
 (ns nrepl.client.tty
   (:require [readline :as r]
             [nrepl.client :as c]
-            [nrepl.async :as a]))
+            [nrepl.async :as a]
+            [clojure.string :as s]))
 
 (def project->string
   {:nrepl  "nREPL"
@@ -17,17 +18,26 @@
         (for [[project info] (:versions info)]
           (str (project->string project) " " (:version-string info) "\n")))))
 
+(defn last-symbol [s] (last (s/split s #"[ '\(\[]")))
+
 (defn -main []
-  (a/let [port 7888
+  (a/let [port 7889
           host "127.0.0.1"
           client (c/connect :port port)
           info   (c/message client {:op "describe"})
           ns     (atom (get-in info [0 :aux :current-ns] "cljs.user"))
           is-tty? (true? js/process.stdin.isTTY)
+          completer (fn [line done]
+                      (a/let [sym (last-symbol line)
+                              res (c/message client {:op "complete" :ns @ns :symbol sym})
+                              completions (-> res first :completions)
+                              candidates (clj->js (mapv :candidate (take 25 completions)))]
+                        (done nil #js [candidates sym])))
           rl (r/createInterface
               (if-not is-tty?
                 #js {:input js/process.stdin}
                 #js {:input js/process.stdin
+                     :completer completer
                      :output js/process.stdout}))
           prompt! (fn []
                     (.setPrompt rl (str @ns "=> "))

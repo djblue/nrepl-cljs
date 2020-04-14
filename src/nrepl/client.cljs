@@ -1,20 +1,21 @@
 (ns nrepl.client
-  (:require [nrepl.bencode :refer [encode decode]]))
+  (:require [nrepl.bencode :refer [encode decode-all]]))
 
 (defn- on-message [client data]
-  (let [messages (:messages client)
-        [message data] (decode data :keywordize-keys true)
-        id (:id message)]
-    (swap! messages update id #(conj % message))
-    (when-not (zero? (.-length data))
-      (recur client data))))
+  (let [data            (js/Buffer.concat #js [@(:data client) data])
+        [messages data] (decode-all data :keywordize-keys true)]
+    (reset! (:data client) data)
+    (doseq [message messages]
+      (swap! (:messages client) update (:id message) conj message))))
+
+(def empty-buffer (js/Buffer.from ""))
 
 (defn connect [& {:keys [port]}]
   (js/Promise.
    (fn [resolve reject]
      (let [net (js/require "net")
-           socket (.Socket net) messages (atom {})
-           client {:socket socket :messages messages}]
+           socket (.Socket net) messages (atom {}) data (atom empty-buffer)
+           client {:socket socket :messages messages :data data}]
        (.connect socket port #(resolve client))
        (.on socket "data" #(on-message client %))))))
 
