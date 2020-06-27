@@ -1,24 +1,24 @@
 # nrepl-cljs
 
-Initial implementation of [nrepl](https://github.com/nrepl/nrepl) for
-[lumo](https://github.com/anmonteiro/lumo).
+Initial implementation of [nrepl](https://github.com/nrepl/nrepl) in
+boostrapped clojurescript for node.
 
-[![Build Status](https://travis-ci.org/djblue/nrepl-cljs.svg?branch=master)](https://travis-ci.org/djblue/nrepl-cljs)
+## development
 
-## start
+To get started developing in this project, do:
 
-To start an nrepl server on port 7888, do:
+    clojure -A:shadow-cljs watch bootstrap server client
 
-    npm start
+To start the nrepl server on port 7888, do:
 
-## test
+    node target/server
 
-To run tests, do:
+To connect the nrepl client to the server, do:
 
-    npm test
+    node target/client
 
-##  proxy
+## status
 
-To run a tcp proxy to investigate the nrepl protocol, do:
+Currenly, the only real op supported by the server is eval. Contributions
+are welcome!
 
-    npm run proxy <destination-port>
