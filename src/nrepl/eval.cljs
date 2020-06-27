@@ -1,4 +1,4 @@
-(ns nrepl.repl
+(ns nrepl.eval
   (:refer-clojure :exclude [eval])
   (:require [cljs.js :as cljs]
             [cljs.env :as env]

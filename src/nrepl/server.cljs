@@ -1,15 +1,15 @@
 (ns nrepl.server
+  (:refer-clojure :exclude [eval])
   (:require [net :as net]
             [cljs.tools.reader :refer [read-string]]
             [cljs.js :as cljs]
             [clojure.string :as s]
             [nrepl.bencode :refer [encode decode-all]]
+            [nrepl.eval :refer [eval]]
             [nrepl.async :as a]
             [clojure.pprint :refer [pprint]]))
 
 (defonce sessions (atom {}))
-
-(def my-eval (atom nil))
 
 (defn ignore [source]
   (some #(s/includes? source %)
@@ -21,10 +21,9 @@
 (defn info [req]
   (when-not (empty? (:symbol req))
     (let [s (:symbol req)
-          m (@my-eval
+          m (eval
              (pr-str `(meta (var ~(symbol s))))
-             (:ns req)
-             (:session req))]
+             (:ns req))]
       (merge
        {:name s}
        (select-keys m [:doc])))))
@@ -61,9 +60,9 @@
     :eval
     (let [code (:code req)
           session (:session req)
-          ns (or (:ns req) 'cljs.user)]
+          ns (or (:ns req) "cljs.user")]
       (try
-        (a/let [res (@my-eval code ns)
+        (a/let [res (eval code ns)
                 out ""]
           (cond
             (contains? res :error)
@@ -136,19 +135,16 @@
                         (.end socket)))))
     data))
 
-(defn setup [eval]
-  (fn [socket]
-    (let [state (atom nil)]
-      (.setNoDelay socket true)
-      (.on socket "data"
-           #(do
-              (reset! my-eval eval)
-              (reset! state (transport socket @state %)))))))
+(defn setup [socket]
+  (let [state (atom nil)]
+    (.setNoDelay socket true)
+    (.on socket "data"
+         #(reset! state (transport socket @state %)))))
 
-(defn start-server [eval]
+(defn start-server []
   (js/Promise.
    (fn [resolve reject]
-     (let [srv (net/createServer (setup eval))]
+     (let [srv (net/createServer setup)]
        (.on srv "error" reject)
        (.listen
         srv
@@ -160,3 +156,6 @@
 (defn stop-server [server]
   (.close (:handle server)))
 
+(defn -main []
+  (a/let [result (eval "(ns cljs.user)" "cljs.user")]
+    (start-server)))
