@@ -24,6 +24,7 @@
     "nrepl"
   ],
   "devDependencies": {
-    "source-map-support": "^0.5.16"
+    "source-map-support": "^0.5.16",
+    "ws": "^7.3.0"
   }
 }

@@ -6,10 +6,7 @@
    :output-to "target/main"
 
    :compiler-options
-   {:optimizations :simple}
-
-   :devtools
-   {:enabled false}}
+   {:optimizations :simple}}
 
   :client
   {:target :node-script
@@ -17,10 +14,7 @@
    :output-to "target/repl"
 
    :compiler-options
-   {:optimizations :simple}
-
-   :devtools
-   {:enabled false}}
+   {:optimizations :simple}}
 
   :bootstrap
   {:target :bootstrap
