@@ -4,6 +4,5 @@
             [nrepl.server :as s]))
 
 (defn -main []
-  (a/let [result (r/eval "(ns cljs.user (:require [System]))" "cljs.user")]
-    (println result))
-  (s/start-server r/eval))
+  (a/let [result (r/eval "(ns cljs.user)" "cljs.user")]
+    (s/start-server r/eval)))

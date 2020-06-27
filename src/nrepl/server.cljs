@@ -1,6 +1,5 @@
 (ns nrepl.server
   (:require [net :as net]
-            [System]
             [cljs.tools.reader :refer [read-string]]
             [cljs.js :as cljs]
             [clojure.string :as s]
@@ -66,7 +65,6 @@
       (try
         (a/let [res (@my-eval code ns)
                 out ""]
-          (println res)
           (cond
             (contains? res :error)
             {:err (get-in res [:error :message])}
@@ -76,7 +74,6 @@
             :else (assoc res :out out)))
         (catch js/Object e
           (set! *e e)
-          (println e)
           (loop [e (ex-cause e)]
             (cond
               (nil? e) {:err "unknown"}
@@ -88,7 +85,6 @@
     {}))
 
 (defn dispatch-send [req send]
-  (prn :request req)
   (a/let [op (-> req :op keyword)
           res (dispatch (assoc req :op op))]
     (if (= op :clone)
@@ -134,7 +130,6 @@
                     #_logger)]
     (doseq [req reqs]
       (handler req #(do
-                      (prn :response %)
                       (.write socket (encode %))
                       (when (and (= (:op req) "close")
                                  (contains? % :status))
