@@ -1,7 +1,6 @@
 (ns nrepl.server
   (:refer-clojure :exclude [eval])
   (:require [net :as net]
-            [cljs.tools.reader :refer [read-string]]
             [cljs.js :as cljs]
             [clojure.string :as s]
             [nrepl.bencode :refer [encode decode-all]]
@@ -59,8 +58,7 @@
     :interrupt {}
     :eval
     (let [code (:code req)
-          session (:session req)
-          ns (or (:ns req) "cljs.user")]
+          ns   (or (:ns req) "cljs.user")]
       (try
         (a/let [res (eval code ns)
                 out ""]
@@ -88,9 +86,8 @@
           res (dispatch (assoc req :op op))]
     (if (= op :clone)
       (send (assoc res :status [:done]))
-      (do
-        (.then (js/Promise.resolve (send res))
-               #(send {:status ["done"]}))))))
+      (.then (js/Promise.resolve (send res))
+             #(send {:status ["done"]})))))
 
 (defn promise? [v] (instance? js/Promise v))
 
@@ -157,5 +154,4 @@
   (.close (:handle server)))
 
 (defn -main []
-  (a/let [result (eval "(ns cljs.user)" "cljs.user")]
-    (start-server)))
+  (.then (eval "(ns cljs.user)" "cljs.user") start-server))

@@ -46,7 +46,7 @@
 (defn decode [data & opts]
   (try
     (decode-recur data opts)
-    (catch js/Error e [nil data])))
+    (catch js/Error _e [nil data])))
 
 (defn decode-all [data & opts]
   (loop [items [] data data]

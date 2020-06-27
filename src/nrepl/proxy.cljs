@@ -1,6 +1,6 @@
 (ns nrepl.proxy
   (:require [net :as net]
-            [nrepl.bencode :refer [encode decode-all]]
+            [nrepl.bencode :refer [decode-all]]
             [clojure.pprint :refer [pprint]]))
 
 (defn proxy-to [target direction]

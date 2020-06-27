@@ -3,3 +3,4 @@ node_modules/
 .nrepl-port
 target/
 .shadow-cljs/
+.clj-kondo/.cache/

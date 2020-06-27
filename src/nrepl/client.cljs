@@ -17,11 +17,13 @@
            socket (.Socket net) messages (atom {}) data (atom empty-buffer)
            client {:socket socket :messages messages :data data}]
        (.connect socket port #(resolve client))
-       (.on socket "data" #(on-message client %))))))
+       (.on socket "data" #(on-message client %))
+       (.on socket "error" reject)))))
 
 (defn message [client message]
   (js/Promise.
    (fn [resolve reject]
+     (.on (:socket client) "error" reject)
      (let [id (str (random-uuid)) messages (:messages client)]
        (swap! messages assoc id [])
        (add-watch messages

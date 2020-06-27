@@ -1,0 +1,2 @@
+{:lint-as
+ {nrepl.async/let clojure.core/let}}
