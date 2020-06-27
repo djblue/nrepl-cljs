@@ -21,7 +21,7 @@
 (defn last-symbol [s] (last (s/split s #"[ '\(\[]")))
 
 (defn -main []
-  (a/let [port 7889
+  (a/let [port 7888
           host "127.0.0.1"
           client (c/connect :port port)
           info   (c/message client {:op "describe"})
