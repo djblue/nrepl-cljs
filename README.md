@@ -1,7 +1,7 @@
 # nrepl-cljs
 
 Initial implementation of [nrepl](https://github.com/nrepl/nrepl) in
-boostrapped clojurescript for node.
+boostrapped clojurescript for node via [shadow-cljs](http://shadow-cljs.org/).
 
 ## development
 
