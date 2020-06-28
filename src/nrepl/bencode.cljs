@@ -57,10 +57,13 @@
 
 (defn read-bencode [string] (first (decode string)))
 
+(defn utf8-bytes [s]
+  (.-length (js/Buffer.from s)))
+
 (defn encode [data]
   (cond
     (string? data)
-    (str (count data) ":" data)
+    (str (utf8-bytes data) ":" data)
     (or (keyword? data)
         (symbol? data))
     (recur (str
