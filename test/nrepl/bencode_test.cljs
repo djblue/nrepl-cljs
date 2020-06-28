@@ -1,5 +1,5 @@
 (ns nrepl.bencode-test
-  (:require [clojure.test :refer [are deftest is]]
+  (:require [clojure.test :refer [are deftest]]
             [nrepl.bencode :as bencode :refer [read-bencode
                                                write-bencode]]))
 

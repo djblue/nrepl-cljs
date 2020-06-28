@@ -18,4 +18,8 @@
    :exclude #{cljs.js}
    :entries [cljs.js]
    :macros []
-   :js-options {:js-provider :require}}}}
+   :js-options {:js-provider :require}}
+
+  :test
+  {:target    :node-test
+   :output-to "target/node-tests.js"}}}
